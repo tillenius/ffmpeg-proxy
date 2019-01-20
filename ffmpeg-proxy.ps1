@@ -18,7 +18,7 @@ function GetWeb($uri) {
 
 	$content = $response.content
 	if ($content.gettype().Name -eq "Byte[]") {
-		$content = [System.Text.Encoding]::ASCII.GetString($response.content)
+		$content = [System.Text.Encoding]::UTF8.GetString($response.content)
 	} elseif ($response.BaseResponse.CharacterSet -ne "") {
         $content = [System.Text.Encoding]::UTF8.GetString([System.Text.Encoding]::GetEncoding($response.BaseResponse.CharacterSet).GetBytes($response.content))
     }
@@ -60,7 +60,7 @@ if ($mainm3u8 | ? { $_ -match 'TYPE=SUBTITLES,.*,URI="(.*)"' }) {
 	$subsuri = $Matches[1]
 } else {
 	write-host '### ERROR: #EXT-X-MEDIA:TYPE=SUBTITLES,...,URI="..." not found'
-	write-host $mainm3u8
+	$mainm3u8 | export-clixml error-mainm3u8.xml
 	return;
 }
 
@@ -75,7 +75,7 @@ if ($subm3u8 | ? { $_ -match 'USP-X-TIMESTAMP-MAP:MPEGTS=(.*),LOCAL=' }) {
 	$offset = [int]$matches[1]
 } else {
 	write-host "### ERROR: USP-X-TIMESTAMP-MAP:MPEGTS= NOT FOUND"
-	write-host $subm3u8
+	$subm3u8 | export-clixml error-subm3u8.xml
 	return;
 }
 
@@ -116,19 +116,19 @@ for ($i = 0; $i -lt $count; $i++) {
 	$webvtt = GetWeb ($baseuri + "/" + $webvtturis[$i])
 
 	if ($webvtt[0] -ne "WEBVTT") {
-		write-host "### ERROR: EXPECTED LINE 1: 'WEBVTT', GOT:"
-		write-host $webvtt
+		write-host "### ERROR: EXPECTED LINE 1: 'WEBVTT' IN" $webvtturis[$i]
+        $webvtt | export-clixml error-${i}.xml
 		return
 	}
 	if (-not ($webvtt[1] -match 'X-TIMESTAMP-MAP=MPEGTS:(.*),LOCAL:')) {
-		write-host "### ERROR: EXPECTED LINE 2: 'X-TIMESTAMP-MAP=MPEGTS:#,LOCAL:', GOT:"
-		write-host $webvtt
+		write-host "### ERROR: EXPECTED LINE 2: 'X-TIMESTAMP-MAP=MPEGTS:#,LOCAL:' IN" $webvtturis[$i]
+        $webvtt | export-clixml error-${i}.xml
 		return
 	}
 	$time = ([int]$Matches[1] - $offset) / $tsresolution
 	if ($webvtt[2].length -ne 0) {
-		write-host "### ERROR: EXPECTED LINE 3: <empty>, GOT:"
-		write-host $webvtt
+		write-host "### ERROR: EXPECTED LINE 3: <empty> IN" $webvtturis[$i]
+        $webvtt | export-clixml error-${i}.xml
 		return
 	}
 
@@ -150,8 +150,8 @@ for ($i = 0; $i -lt $count; $i++) {
 				if ($webvtt[$j].length -eq 0) {
 					continue;
 				}
-				write-host "### ERROR: EXPECTED TIMESTAMP BEFORE TEXT, GOT:"
-				write-host $webvtt
+				write-host "### ERROR: EXPECTED TIMESTAMP BEFORE TEXT IN" $webvtturis[$i]
+                $webvtt | export-clixml error-${i}.xml
 				return;
 			}
 			[void]$currEntry.lines.add($webvtt[$j])
