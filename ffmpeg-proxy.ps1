@@ -19,7 +19,7 @@ function GetWeb($uri) {
 	$content = $response.content
 	if ($content.gettype().Name -eq "Byte[]") {
 		$content = [System.Text.Encoding]::UTF8.GetString($response.content)
-	} elseif ($response.BaseResponse.CharacterSet -ne "") {
+	} elseif ($response.BaseResponse.CharacterSet) {
         $content = [System.Text.Encoding]::UTF8.GetString([System.Text.Encoding]::GetEncoding($response.BaseResponse.CharacterSet).GetBytes($response.content))
     }
 
